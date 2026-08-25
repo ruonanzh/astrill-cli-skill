@@ -23,6 +23,7 @@ alias astrill='python D:/astrill-cli-skill/astrill_cli.py'
 ## 用法
 
 ```bash
+python astrill_cli.py start         # 启动客户端(未运行才启动,已运行直接跳过)
 python astrill_cli.py status        # VPN 是否已连接(含公网 IP)
 python astrill_cli.py connect       # 连接 VPN(点击按钮并等待隧道建立)
 python astrill_cli.py disconnect    # 断开 VPN
@@ -47,8 +48,9 @@ VPN 已连接
 
 | 命令 | 机制 |
 |---|---|
+| `start` | 通过 `tasklist` 检查 `astrill.exe`;未运行则从注册表 `HKLM\SOFTWARE\Astrill` 或常见安装路径找到 exe 并启动,然后轮询等待主窗口出现(幂等,已运行直接返回) |
 | `status` | 解析 `route print -4`:存在 `198.18.x.x` 网关(默认路由 0.0.0.0/1 + 128.0.0.0/1 经 Wintun 隧道)= 已连接 |
-| `connect` / `disconnect` | ① 按进程名找 Astrill 主窗口 → ② 置前、截图 → ③ 在上部 55% 区域找橙色按钮(找不到则按窗口相对位置 fallback)→ ④ 点击 → ⑤ 轮询路由表直到状态切换 |
+| `connect` / `disconnect` | ① 未运行时自动 `start` → ② 按进程名找 Astrill 主窗口 → ③ 置前、截图 → ④ 在上部 55% 区域找橙色按钮(找不到则按窗口相对位置 fallback)→ ⑤ 点击 → ⑥ 轮询路由表直到状态切换 |
 
 注意点(踩过的坑):
 

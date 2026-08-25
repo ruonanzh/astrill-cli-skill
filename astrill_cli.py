@@ -305,6 +305,39 @@ def public_ip():
 # ---------------------------------------------------------------------------
 # actions
 # ---------------------------------------------------------------------------
+def do_start(json_out):
+    """Launch the Astrill desktop client if it is not already running."""
+    if find_astrill_pids():
+        if json_out:
+            import json
+            print(json.dumps({"started": False, "already_running": True}))
+        else:
+            print("Astrill 已经在运行")
+        return 0
+
+    if not ensure_astrill_running():
+        print("未找到 astrill.exe,无法启动。请先手动安装/打开 Astrill。")
+        return 2
+
+    # wait a few seconds for the main window to appear (client startup takes time)
+    hwnd = None
+    for _ in range(20):
+        hwnd = find_astrill_window()
+        if hwnd:
+            break
+        time.sleep(0.5)
+    if json_out:
+        import json
+        print(json.dumps({"started": True, "window_found": hwnd is not None}))
+    else:
+        print("Astrill 已启动")
+        if hwnd:
+            print("主窗口已就绪")
+        else:
+            print("主窗口尚未出现(客户端可能还在初始化,稍后可用 status 查询)")
+    return 0
+
+
 def get_button_point(hwnd):
     """Return (click_x, click_y, button_state) for the ON/OFF button, or
     (None, None, None) if it cannot be found.
@@ -421,11 +454,13 @@ def main():
             except Exception:
                 pass
     ap = argparse.ArgumentParser(prog="astrill-cli", description="控制 Astrill VPN(Windows)")
-    ap.add_argument("command", choices=["status", "connect", "disconnect"])
+    ap.add_argument("command", choices=["start", "status", "connect", "disconnect"])
     ap.add_argument("--json", action="store_true", help="以 JSON 输出")
     args = ap.parse_args()
 
-    if args.command == "status":
+    if args.command == "start":
+        return do_start(args.json)
+    elif args.command == "status":
         return do_status(args.json)
     elif args.command == "connect":
         return do_toggle(True, args.json)
