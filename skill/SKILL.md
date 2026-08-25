@@ -1,6 +1,6 @@
 ---
 name: astrill
-description: 控制 Windows 上的 Astrill VPN 桌面客户端(连接/断开/状态查询)。当用户需要开 VPN、关 VPN、检查 VPN 是否连接、或切换网络出口时使用。需要 Astrill 客户端已安装并登录。
+description: 控制 Windows 上的 Astrill VPN 桌面客户端(启动/连接/断开/状态查询)。当用户需要开 VPN(如访问 GitHub、被墙网站)、关 VPN、检查 VPN 是否连接、或切换网络出口时使用。需要 Astrill 客户端已安装并登录。
 ---
 
 # Astrill VPN 控制
@@ -15,14 +15,15 @@ description: 控制 Windows 上的 Astrill VPN 桌面客户端(连接/断开/状
 
 ## 命令
 
-所有命令使用系统 Python(`python` 或 `py`),脚本路径为 `D:\astrill-cli-skill\astrill_cli.py`:
+在技能目录下用相对路径执行(`python` 不可用时用 `py`):
 
 ```bash
-python D:/astrill-cli-skill/astrill_cli.py start         # 启动客户端(已运行则跳过)
-python D:/astrill-cli-skill/astrill_cli.py status        # 查询状态
-python D:/astrill-cli-skill/astrill_cli.py connect       # 连接
-python D:/astrill-cli-skill/astrill_cli.py disconnect    # 断开
-python D:/astrill-cli-skill/astrill_cli.py status --json # JSON 输出
+cd ~/.pi/agent/skills/astrill
+python astrill_cli.py start         # 启动客户端(已运行则跳过)
+python astrill_cli.py status        # 查询状态
+python astrill_cli.py connect       # 连接
+python astrill_cli.py disconnect    # 断开
+python astrill_cli.py status --json # JSON 输出
 ```
 
 ## 退出码约定
@@ -42,6 +43,18 @@ python D:/astrill-cli-skill/astrill_cli.py status --json # JSON 输出
    - 提示"目标点被其他窗口遮挡" → 把 Astrill 窗口移到前台后重试
    - 连接超时 → 可能是服务器网络问题,重试一次或检查 Astrill 界面状态
 4. **公网 IP**:`connect`/`status` 输出里的 IP 若为国内 IP(如 114.x/223.x 等)说明未生效,可等待几秒后重查 `status`。
+
+## 使用场景建议
+
+- **GitHub / 被墙网站(必开 VPN)**:访问 GitHub(含 `git clone`、`git push`、下载 release、`gh` CLI)、Google、Stack Overflow 等被墙站点前,必须执行 `connect`。完成后按需 `disconnect`。
+- **npm(推荐关 VPN + 国内镜像)**:执行 `npm install` / `npm publish` 等操作时,推荐先 `disconnect` 关闭 VPN,并把 registry 设为国内镜像,否则流量走 VPN 出口会导致下载慢、超时或失败:
+
+  ```bash
+  npm config set registry https://registry.npmmirror.com   # 淘宝 npmmirror 镜像
+  npm config get registry                                    # 确认生效
+  ```
+
+  注意:关闭 VPN 后 npm 可能因代理环境变量(NODE_OPTIONS/HTTP_PROXY 等)仍走代理,如异常可检查 `npm config get proxy` 和 `npm config get https-proxy`。
 
 ## 注意
 

@@ -61,14 +61,24 @@ VPN 已连接
 
 ## pi 技能
 
-`skill/SKILL.md` 是 [pi](https://github.com/earendil-works/pi-coding-agent) 的技能定义。把 `skill/` 目录链接/复制到技能目录(如 `~/.pi/agent/skills/astrill/`)即可让 pi 直接使用:
+`skill/SKILL.md` 是 [pi](https://github.com/earendil-works/pi-coding-agent) 的技能定义。已安装到全局技能目录 `~/.pi/agent/skills/astrill/`(含 `astrill_cli.py`,SKILL.md 用相对路径引用):
 
 ```bash
 mkdir -p ~/.pi/agent/skills
 cp -r skill ~/.pi/agent/skills/astrill
+cp astrill_cli.py ~/.pi/agent/skills/astrill/
 ```
 
-之后 pi 里执行 `connect`、`disconnect`、`status` 即可控制 VPN。
+之后 pi 里执行 `start`、`connect`、`disconnect`、`status` 即可控制 VPN。
+
+## 使用场景建议
+
+- **GitHub / 被墙网站(必开 VPN)**:访问 GitHub(`git clone/push`、下载 release、`gh` CLI)、Google、Stack Overflow 等被墙站点前,必须执行 `connect`。
+- **npm(推荐关 VPN + 国内镜像)**:`npm install` / `npm publish` 等操作前,推荐 `disconnect` 关闭 VPN,并设置国内镜像:
+
+  ```bash
+  npm config set registry https://registry.npmmirror.com
+  ```
 
 ## 目录
 
