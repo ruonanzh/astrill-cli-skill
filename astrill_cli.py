@@ -145,7 +145,11 @@ def ensure_astrill_running():
             install = m.group(1).strip()
     except Exception:
         pass
-    candidates = [install] if install else []
+    candidates = []
+    if install:
+        # InstallPath 通常是安装目录(带尾斜杠),也可能是 exe 路径,两种都试
+        candidates.append(os.path.join(install, "astrill.exe"))
+        candidates.append(install)
     candidates += [r"C:\Program Files (x86)\Astrill\astrill.exe",
                    r"C:\Program Files\Astrill\astrill.exe"]
     exe = next((p for p in candidates if p and os.path.exists(p)), None)
