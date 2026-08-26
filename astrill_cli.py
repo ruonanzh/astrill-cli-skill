@@ -43,6 +43,7 @@ FALLBACK_BTN = (0.503, 0.300)
 CONNECT_TIMEOUT = 40
 POLL_INTERVAL = 1.0
 
+SW_SHOW = 5
 SW_RESTORE = 9
 GA_ROOT = 2
 
@@ -101,33 +102,36 @@ def find_astrill_pids():
     return pids
 
 
-def find_astrill_window():
-    """Find the Astrill main window (top-level, pid match).
-    Returns hwnd or None.  Prefers a visible window titled 'Astrill'."""
+def find_astrill_windows(include_hidden=False):
+    """All Astrill main windows (top-level, pid match), best first.
+    Sort order: visible first, then exact title 'Astrill' match.
+    include_hidden also returns windows the client hid when closed to tray."""
     pids = set(find_astrill_pids())
     if not pids:
-        return None
+        return []
     found = []
 
     @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
     def cb(hwnd, lparam):
         pid = wintypes.DWORD()
         user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-        if pid.value in pids and user32.IsWindowVisible(hwnd):
+        if pid.value in pids and (user32.IsWindowVisible(hwnd) or include_hidden):
             title = win_text(hwnd)
             cls = win_class(hwnd)
             if title == WINDOW_TITLE or cls == WINDOW_CLASS:
-                found.append((hwnd, title, cls))
+                found.append((hwnd, title, cls, user32.IsWindowVisible(hwnd)))
         return True
 
     user32.EnumWindows(cb, 0)
-    if not found:
-        return None
-    # prefer exact title match
-    for hwnd, title, cls in found:
-        if title == WINDOW_TITLE:
-            return hwnd
-    return found[0][0]
+    found.sort(key=lambda w: (not w[3], w[1] != WINDOW_TITLE))
+    return [w[0] for w in found]
+
+
+def find_astrill_window():
+    """Find the visible Astrill main window (top-level, pid match).
+    Returns hwnd or None.  Prefers a visible window titled 'Astrill'."""
+    wins = find_astrill_windows(include_hidden=False)
+    return wins[0] if wins else None
 
 
 def ensure_astrill_running():
@@ -433,6 +437,41 @@ def do_toggle(want_connected, json_out):
     return 0
 
 
+def restore_window():
+    """Bring an Astrill main window back to the foreground, even if it was
+    closed to the tray (the client hides its main window instead of closing it).
+    Returns hwnd or None."""
+    hwnd = find_astrill_window()
+    if hwnd:
+        show_window(hwnd)
+        return hwnd
+    for h in find_astrill_windows(include_hidden=True):
+        user32.ShowWindow(h, SW_SHOW)
+        user32.ShowWindow(h, SW_RESTORE)
+        show_window(h)
+        time.sleep(0.3)
+        if user32.IsWindowVisible(h):
+            return h
+    return None
+
+
+def do_restore(json_out):
+    """Bring the Astrill main window to the foreground (from tray/minimized)."""
+    if not find_astrill_pids():
+        print("Astrill 未运行,请先执行 start")
+        return 2
+    hwnd = restore_window()
+    if json_out:
+        import json
+        print(json.dumps({"restored": hwnd is not None}))
+    else:
+        if hwnd:
+            print("Astrill 主窗口已恢复")
+        else:
+            print("恢复失败:未找到 Astrill 主窗口(进程在但无窗口句柄)。请手动打开 Astrill。")
+    return 0 if hwnd else 2
+
+
 def do_status(json_out):
     connected = vpn_connected()
     if json_out:
@@ -458,7 +497,7 @@ def main():
             except Exception:
                 pass
     ap = argparse.ArgumentParser(prog="astrill-cli", description="控制 Astrill VPN(Windows)")
-    ap.add_argument("command", choices=["start", "status", "connect", "disconnect"])
+    ap.add_argument("command", choices=["start", "status", "connect", "disconnect", "restore"])
     ap.add_argument("--json", action="store_true", help="以 JSON 输出")
     args = ap.parse_args()
 
@@ -466,6 +505,8 @@ def main():
         return do_start(args.json)
     elif args.command == "status":
         return do_status(args.json)
+    elif args.command == "restore":
+        return do_restore(args.json)
     elif args.command == "connect":
         return do_toggle(True, args.json)
     elif args.command == "disconnect":
