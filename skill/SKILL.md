@@ -1,6 +1,6 @@
 ---
 name: astrill
-description: 控制 Windows 上的 Astrill VPN 桌面客户端(启动/连接/断开/状态查询)。当用户需要开 VPN(如访问 GitHub、被墙网站)、关 VPN、检查 VPN 是否连接、或切换网络出口时使用。需要 Astrill 客户端已安装并登录。
+description: 控制 Windows 上的 Astrill VPN 桌面客户端(启动/连接/断开/状态查询)。当用户需要开 VPN(如访问 GitHub、被墙网站)、关 VPN、检查 VPN 是否连接、或切换网络出口时使用。**所有需要远端的 git 指令(pull/push/clone/fetch/sync)操作前先检查 VPN 状态**——未开 VPN 时 GitHub 访问会被 GFW 干扰而失败。需要 Astrill 客户端已安装并登录。
 ---
 
 # Astrill VPN 控制
@@ -15,15 +15,15 @@ description: 控制 Windows 上的 Astrill VPN 桌面客户端(启动/连接/断
 
 ## 命令
 
-在技能目录下用相对路径执行(`python` 不可用时用 `py`):
+在技能目录下用相对路径执行(**优先用 `py`**;本机 `python` 指向 Windows Store stub(`...\WindowsApps\python`),运行无输出、退出码 49,比"命令不存在"更隐蔽):
 
 ```bash
 cd ~/.pi/agent/skills/astrill
-python astrill_cli.py start         # 启动客户端(已运行则跳过)
-python astrill_cli.py status        # 查询状态
-python astrill_cli.py connect       # 连接
-python astrill_cli.py disconnect    # 断开
-python astrill_cli.py status --json # JSON 输出
+py astrill_cli.py start         # 启动客户端(已运行则跳过)
+py astrill_cli.py status        # 查询状态
+py astrill_cli.py connect       # 连接
+py astrill_cli.py disconnect    # 断开
+py astrill_cli.py status --json # JSON 输出
 ```
 
 ## 退出码约定
@@ -43,10 +43,19 @@ python astrill_cli.py status --json # JSON 输出
    - 提示"目标点被其他窗口遮挡" → 把 Astrill 窗口移到前台后重试
    - 连接超时 → 可能是服务器网络问题,重试一次或检查 Astrill 界面状态
 4. **公网 IP**:`connect`/`status` 输出里的 IP 若为国内 IP(如 114.x/223.x 等)说明未生效,可等待几秒后重查 `status`。
+5. **connect 重试**:首次可能报"未找到主窗口"(退出码 2,客户端启动中)→ 先 `start` 等几秒再 `connect`;报"等待超时"(退出码 1)→ 直接再 `connect` 一次,往往第二次成功。
+
+## git 远端操作前置检查
+
+所有需要远端的 git 指令(`pull`/`push`/`clone`/`fetch`/`sync`/`submodule`)执行前,**先检查 VPN 状态**;未连接则先 `connect`——只有 VPN 开启时这些操作才会成功。
+
+- 不开 VPN 时 GitHub 受 GFW 间歇性干扰,报 `Connection reset` / `Recv failure`。**重试一次仍失败就直接 `connect`**,不要反复重试。
+- **一个 repo 成功 ≠ GitHub 通**:同一时刻可能出现 A 仓库拉成功、B 仓库被 reset(GFW 按连接重置,非全量封锁)。判断只看目标操作本身;多仓库并行拉取时**任一失败即先查 VPN**。
+- 完成后按需 `disconnect`(npm/pnpm 安装类操作要关 VPN + 国内镜像,见下)。
 
 ## 使用场景建议
 
-- **GitHub / 被墙网站(必开 VPN)**:访问 GitHub(含 `git clone`、`git push`、下载 release、`gh` CLI)、Google、Stack Overflow 等被墙站点前,必须执行 `connect`。完成后按需 `disconnect`。
+- **GitHub / 被墙网站(必开 VPN)**:访问 GitHub(含 `git clone`、`git push`、下载 release、`gh` CLI)、Google、Stack Overflow 等被墙站点前,必须执行 `connect`(见上「git 远端操作前置检查」)。完成后按需 `disconnect`。
 - **npm(推荐关 VPN + 国内镜像)**:执行 `npm install` / `npm publish` 等操作时,推荐先 `disconnect` 关闭 VPN,并把 registry 设为国内镜像,否则流量走 VPN 出口会导致下载慢、超时或失败:
 
   ```bash
