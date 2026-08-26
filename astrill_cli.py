@@ -440,25 +440,46 @@ def do_toggle(want_connected, json_out):
 def restore_window():
     """Bring an Astrill main window back to the foreground, even if it was
     closed to the tray (the client hides its main window instead of closing it).
-    Returns hwnd or None."""
+    Returns hwnd or None.
+
+    Note: un-hiding the hidden window shows a stale snapshot that is NOT
+    interactive, so a closed-to-tray client is restarted instead - that makes
+    Astrill create a fresh, fully interactive window."""
     hwnd = find_astrill_window()
     if hwnd:
+        # visible (incl. minimized) window: just bring it forward
         show_window(hwnd)
         return hwnd
-    for h in find_astrill_windows(include_hidden=True):
-        user32.ShowWindow(h, SW_SHOW)
-        user32.ShowWindow(h, SW_RESTORE)
-        show_window(h)
-        time.sleep(0.3)
-        if user32.IsWindowVisible(h):
-            return h
+    # no visible window -> the client is closed to the tray; restart it
+    if vpn_connected():
+        print("注意:VPN 当前已连接,重启 Astrill 会断开连接")
+    if not find_astrill_pids():
+        if not ensure_astrill_running():
+            return None
+    else:
+        subprocess.run(["taskkill", "/F", "/IM", "astrill.exe"],
+                       capture_output=True, timeout=10)
+        for _ in range(20):
+            time.sleep(0.5)
+            if not find_astrill_pids():
+                break
+        if not ensure_astrill_running():
+            return None
+    for _ in range(20):
+        time.sleep(0.5)
+        hwnd = find_astrill_window()
+        if hwnd:
+            show_window(hwnd)
+            return hwnd
     return None
 
 
 def do_restore(json_out):
-    """Bring the Astrill main window to the foreground (from tray/minimized)."""
-    if not find_astrill_pids():
-        print("Astrill 未运行,请先执行 start")
+    """Bring the Astrill main window to the foreground.
+    If the client was closed to the tray, restart it (un-hiding the hidden
+    window only shows a non-interactive stale snapshot)."""
+    if not find_astrill_pids() and not ensure_astrill_running():
+        print("Astrill 未运行且无法启动,请先手动打开 Astrill")
         return 2
     hwnd = restore_window()
     if json_out:
@@ -468,7 +489,7 @@ def do_restore(json_out):
         if hwnd:
             print("Astrill 主窗口已恢复")
         else:
-            print("恢复失败:未找到 Astrill 主窗口(进程在但无窗口句柄)。请手动打开 Astrill。")
+            print("恢复失败:未找到 Astrill 主窗口。请手动打开 Astrill。")
     return 0 if hwnd else 2
 
 

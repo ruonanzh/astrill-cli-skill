@@ -23,7 +23,7 @@ py astrill_cli.py start         # 启动客户端(已运行则跳过)
 py astrill_cli.py status        # 查询状态
 py astrill_cli.py connect       # 连接
 py astrill_cli.py disconnect    # 断开
-py astrill_cli.py restore       # 从托盘恢复到前台(窗口被点 X 关闭后)
+py astrill_cli.py restore       # 恢复主窗口(缩到托盘时重启客户端,确保可交互)
 py astrill_cli.py status --json # JSON 输出
 ```
 
@@ -41,7 +41,7 @@ py astrill_cli.py status --json # JSON 输出
 3. **失败排查**:
    - 退出码 `2` 且提示找不到 astrill.exe → 确认已安装 Astrill,或手动打开一次
    - 退出码 `2` 且提示找不到窗口 → Astrill 进程在但主窗口未出现,稍后重试 `status`/`connect`
-   - **窗口被点 X 关闭后缩到托盘**(进程在但主窗口消失)→ 执行 `restore` 把主窗口恢复到前台,再 `connect`
+   - **窗口被点 X 关闭后缩到托盘**(进程在但主窗口消失)→ 执行 `restore`。注意:`restore` 在托盘状态会重启 Astrill 客户端(已连接 VPN 会断开),因为强行显示隐藏窗口得到的只是不可交互的旧快照
    - 提示"目标点被其他窗口遮挡" → 把 Astrill 窗口移到前台后重试
    - 连接超时 → 可能是服务器网络问题,重试一次或检查 Astrill 界面状态
 4. **公网 IP**:`connect`/`status` 输出里的 IP 若为国内 IP(如 114.x/223.x 等)说明未生效,可等待几秒后重查 `status`。
