@@ -61,15 +61,15 @@ VPN 已连接
 
 ## pi 技能
 
-`skill/SKILL.md` 是 [pi](https://github.com/earendil-works/pi-coding-agent) 的技能定义。已安装到全局技能目录 `~/.pi/agent/skills/astrill/`(含 `astrill_cli.py`,SKILL.md 用相对路径引用):
+`SKILL.md` 是 [pi](https://github.com/earendil-works/pi-coding-agent) 的技能定义。**repo 根目录即技能目录**(`SKILL.md` 与 `astrill_cli.py` 同根,相对路径引用成立),通过 **junction** 挂到全局技能目录,git 提交即时生效、无需手动复制:
 
 ```bash
-mkdir -p ~/.pi/agent/skills
-cp -r skill ~/.pi/agent/skills/astrill
-cp astrill_cli.py ~/.pi/agent/skills/astrill/
+# 首次安装(目标路径不能已存在,先移除旧的复制目录):
+rm -rf ~/.pi/agent/skills/astrill
+cmd /c "mklink /J %USERPROFILE%\.pi\agent\skills\astrill D:\astrill-cli-skill"
 ```
 
-之后 pi 里执行 `start`、`connect`、`disconnect`、`status` 即可控制 VPN。
+之后 pi 里执行 `start`、`connect`、`disconnect`、`status` 即可控制 VPN。改动 repo 即改动技能;`~/.pi/agent/skills/astrill` 只是 junction,pi 扫描时对它透明,repo 里的 `README.md`、`.git` 等不会被误识别为技能。
 
 ## 使用场景建议
 
@@ -83,8 +83,8 @@ cp astrill_cli.py ~/.pi/agent/skills/astrill/
 ## 目录
 
 ```
+SKILL.md            # pi 技能定义(repo 根即技能目录)
 astrill_cli.py      # CLI(单文件,零依赖)
-skill/SKILL.md      # pi 技能定义
 README.md
 ```
 
